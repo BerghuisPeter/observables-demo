@@ -2,6 +2,8 @@ import { Component } from '@angular/core';
 import { concat, concatMap, delay, forkJoin, from, map, merge, mergeMap, Observable, switchMap, tap } from "rxjs";
 import { HttpClient } from "@angular/common/http";
 import { Post } from "./models/post.model";
+import { OBSERVABLE_ENUM } from "./models/observable.enum";
+import { LogService } from "./services/log.service";
 
 @Component({
   selector: 'app-root',
@@ -10,46 +12,69 @@ import { Post } from "./models/post.model";
 })
 export class AppComponent {
 
-  normalCall$: Observable<any>;
-  tapCall$: Observable<any>;
-  mapCall$: Observable<any>;
-  concatMapCall$: Observable<any>;
-  concatCall$: Observable<any>;
-  mergeCall$: Observable<any>;
-  mergeMapCall$: Observable<any>;
-  switchMapCall$: Observable<any>;
-  forkJoinCall$: Observable<any>;
+  public enumList: OBSERVABLE_ENUM[];
+
+  public currentObservable$: Observable<any>;
+  public currentEnum: OBSERVABLE_ENUM;
 
   numberOfPosts: number = 0;
 
-  constructor(private httpClient: HttpClient) {
-    this.normalCall$ = this.getNormalCall();
-    this.tapCall$ = this.getTapCall();
-    this.mapCall$ = this.getMapCall();
-    this.concatCall$ = this.getConcatCall();
-    this.concatMapCall$ = this.getConcatMapCall();
-    this.mergeCall$ = this.getMergeCall();
-    this.mergeMapCall$ = this.getMergeMapCall();
-    this.switchMapCall$ = this.getSwitchMapCall();
-    this.forkJoinCall$ = this.getForkJoinCall();
+  constructor(private httpClient: HttpClient, public logService: LogService) {
+    this.enumList = Object.values(OBSERVABLE_ENUM);
+    this.currentObservable$ = this.getNormal();
+    this.currentEnum = OBSERVABLE_ENUM.normal;
+  }
+
+  changeContent(enumKey: any) {
+    this.logService.clearLogs();
+    this.currentEnum = enumKey;
+    switch (enumKey) {
+      case OBSERVABLE_ENUM.normal:
+        this.currentObservable$ = this.getNormal();
+        break;
+      case OBSERVABLE_ENUM.tap:
+        this.currentObservable$ = this.getTap();
+        break;
+      case OBSERVABLE_ENUM.map:
+        this.currentObservable$ = this.getMap();
+        break;
+      case OBSERVABLE_ENUM.concat:
+        this.currentObservable$ = this.getConcat();
+        break;
+      case OBSERVABLE_ENUM.concatMap:
+        this.currentObservable$ = this.getConcatMap();
+        break;
+      case OBSERVABLE_ENUM.merge:
+        this.currentObservable$ = this.getMerge();
+        break;
+      case OBSERVABLE_ENUM.mergeMap:
+        this.currentObservable$ = this.getMergeMap();
+        break;
+      case OBSERVABLE_ENUM.switchMap:
+        this.currentObservable$ = this.getSwitchMap();
+        break;
+      case OBSERVABLE_ENUM.forkJoin:
+        this.currentObservable$ = this.getForkJoin();
+        break;
+    }
   }
 
   /**
    * Just a normal http call for a list of posts made by user with ID = 1.
    * @private
    */
-  private getNormalCall(): Observable<Post[]> {
+  private getNormal(): Observable<Post[]> {
     return this.httpClient.get<Post[]>('https://jsonplaceholder.typicode.com/users/1/posts');
   }
 
   /**
    * Do something before completing the observable.
-   * Here it initialises the numberOfItems by getting the value of the lis length.
+   * Here it initialises the numberOfItems by getting the value of the list length.
    * tap cannot change the returned value.
    * @private
    */
-  private getTapCall(): Observable<Post[]> {
-    return this.normalCall$.pipe(
+  private getTap(): Observable<Post[]> {
+    return this.getNormal().pipe(
       tap(posts => {
         this.numberOfPosts = posts.length;
       })
@@ -61,17 +86,18 @@ export class AppComponent {
    * Here it modifies the list to return only the first 3 items
    * @private
    */
-  private getMapCall(): Observable<Post[]> {
-    return this.normalCall$.pipe(
+  private getMap(): Observable<Post[]> {
+    return this.getNormal().pipe(
       map(posts => posts.slice(0, 3))
     );
   }
 
   /**
    * Execute all observables one after the other in sequence and emits results of each.
+   * Please note that concat will never complete if some of the input streams don’t complete. This also means that some streams will never be subscribed to.
    * @private
    */
-  private getConcatCall(): Observable<any> {
+  private getConcat(): Observable<any> {
     const call1 = this.httpClient.get<any>('https://jsonplaceholder.typicode.com/users/2');
     const call2 = this.httpClient.get<Post[]>('https://jsonplaceholder.typicode.com/users/2/posts');
     const call3 = this.httpClient.get<any>('https://jsonplaceholder.typicode.com/users/2/albums');
@@ -84,7 +110,7 @@ export class AppComponent {
    * this simply means, instead of emitting the source value, execute another (inner observable) and return emit its value! hench the concatMAP
    * @private
    */
-  private getConcatMapCall(): Observable<any> {
+  private getConcatMap(): Observable<any> {
     // comment IDs to get
     const commentIdsToGet = [1, 2, 3];
 
@@ -102,7 +128,7 @@ export class AppComponent {
    * Execute all observables concurrently and emits results of each in the order of when they finish (no particular order to be clear).
    * @private
    */
-  private getMergeCall(): Observable<any> {
+  private getMerge(): Observable<any> {
     const call1 = this.httpClient.get<any>('https://jsonplaceholder.typicode.com/users/2');
     const call2 = this.httpClient.get<Post[]>('https://jsonplaceholder.typicode.com/users/2/posts');
     const call3 = this.httpClient.get<any>('https://jsonplaceholder.typicode.com/users/2/albums');
@@ -112,10 +138,10 @@ export class AppComponent {
 
   /**
    * Each time the source observable emits, execute inner observable and emit its result instead of the source observable when one completes in no particular order.
-   * this simply means, instead of emitting the source value, execute another (inner observable) and return emit its value! hench the mergeMAP
+   * This simply means, instead of emitting the source value, execute another (inner observable) and return emit its value! hench the mergeMAP
    * @private
    */
-  private getMergeMapCall(): Observable<any> {
+  private getMergeMap(): Observable<any> {
     // comment IDs to get
     const commentIdsToGet = [1, 2, 3];
 
@@ -134,7 +160,7 @@ export class AppComponent {
    * and the previous inner observable hasn't emit a value yet (to be clear, if inner call not done yet).
    * @private
    */
-  private getSwitchMapCall(): Observable<any> {
+  private getSwitchMap(): Observable<any> {
     return this.httpClient.get<Post>('https://jsonplaceholder.typicode.com/posts/3').pipe(
       switchMap((post: Post) =>
         this.httpClient.get('https://jsonplaceholder.typicode.com/users/' + post.userId)
@@ -146,12 +172,13 @@ export class AppComponent {
    * Fires both inner observables at the same time but only completes once both inner observables have completed.
    * @private
    */
-  private getForkJoinCall(): Observable<any> {
+  private getForkJoin(): Observable<any> {
     const listOfCallsToMake = [
       this.httpClient.get<Post[]>('https://jsonplaceholder.typicode.com/users/2/posts'),
       this.httpClient.get<any>('https://jsonplaceholder.typicode.com/users/2').pipe(delay(3000))
     ];
     return forkJoin(listOfCallsToMake);
   }
+
 
 }

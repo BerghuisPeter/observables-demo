@@ -1,6 +1,16 @@
-:host {
+mat-sidenav-container {
+  position: absolute;
+  left: 0;
+  right: 0;
+}
+
+mat-sidenav {
   display: flex;
-  justify-content: space-around;
-  flex-wrap: wrap;
-  gap: 1rem;
+  align-items: center;
+  justify-content: center;
+  width: 200px;
+}
+
+mat-sidenav-content {
+  height: 100vh;
 }

@@ -1,17 +1,17 @@
-<app-observable-test [observableCall]="normalCall$" title="Normal call"></app-observable-test>
+<mat-sidenav-container>
+  <mat-sidenav #sidenav [fixedInViewport]="true" class="example-sidenav" mode="side" opened>
+    <mat-nav-list>
+      <a (click)="changeContent(observableEnum)" *ngFor="let observableEnum of enumList"
+         mat-list-item>
+        {{ observableEnum }}
+      </a>
+    </mat-nav-list>
+  </mat-sidenav>
 
-<app-observable-test [observableCall]="tapCall$" title="Tap"></app-observable-test>
-
-<app-observable-test [observableCall]="mapCall$" title="Map"></app-observable-test>
-
-<app-observable-test [observableCall]="concatCall$" title="concat"></app-observable-test>
-
-<app-observable-test [observableCall]="concatMapCall$" title="concatMap"></app-observable-test>
-
-<app-observable-test [observableCall]="mergeCall$" title="merge"></app-observable-test>
-
-<app-observable-test [observableCall]="mergeMapCall$" title="mergeMap"></app-observable-test>
-
-<app-observable-test [observableCall]="switchMapCall$" title="switchMap"></app-observable-test>
-
-<app-observable-test [observableCall]="forkJoinCall$" title="forkJoin"></app-observable-test>
+  <mat-sidenav-content>
+    <app-observable-test [observableCall]="currentObservable$" [observableEnum]="currentEnum"></app-observable-test>
+    <!--    <div>-->
+    <!--      <p *ngFor="let log of logService.getLogs() | async">{{log}}</p>-->
+    <!--    </div>-->
+  </mat-sidenav-content>
+</mat-sidenav-container>
