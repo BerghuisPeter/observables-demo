@@ -1,5 +1,20 @@
 import { Component } from '@angular/core';
-import { concat, concatMap, delay, forkJoin, from, map, merge, mergeMap, Observable, switchMap, tap } from "rxjs";
+import {
+  catchError,
+  concat,
+  concatMap,
+  delay,
+  forkJoin,
+  from,
+  map,
+  merge,
+  mergeMap,
+  Observable,
+  of,
+  retry,
+  switchMap,
+  tap
+} from "rxjs";
 import { HttpClient } from "@angular/common/http";
 import { Post } from "./models/post.model";
 import { OBSERVABLE_ENUM } from "./models/observable.enum";
@@ -55,6 +70,12 @@ export class AppComponent {
         break;
       case OBSERVABLE_ENUM.forkJoin:
         this.currentObservable$ = this.getForkJoin();
+        break;
+      case OBSERVABLE_ENUM.retry:
+        this.currentObservable$ = this.getRetry();
+        break;
+      case OBSERVABLE_ENUM.catchError:
+        this.currentObservable$ = this.getCatchError();
         break;
     }
   }
@@ -175,10 +196,37 @@ export class AppComponent {
   private getForkJoin(): Observable<any> {
     const listOfCallsToMake = [
       this.httpClient.get<Post[]>('https://jsonplaceholder.typicode.com/users/2/posts'),
-      this.httpClient.get<any>('https://jsonplaceholder.typicode.com/users/2').pipe(delay(3000))
+      this.httpClient.get<any>('https://jsonplaceholder.typicode.com/users/2').pipe(delay(2000))
     ];
     return forkJoin(listOfCallsToMake);
   }
 
+  /**
+   * Retry can be used to retry a failed network request.
+   * @private
+   */
+  private getRetry(): Observable<any> {
+    return this.httpClient.get<any>('https://jsonplaceholder.typicode.com/users/5000').pipe(
+      retry({ count: 2, delay: 2000 })
+    );
+  }
+
+  /**
+   * catch an error
+   * @private
+   */
+  private getCatchError(): Observable<any> {
+    const call1 = this.httpClient.get<any>('https://jsonplaceholder.typicode.com/users/2');
+    const callWithErrorButCaught = this.httpClient.get<Post[]>('https://jsonplaceholder.typicode.com/users/5000').pipe(
+      catchError(error => {
+        // You can log the error or perform other actions here
+        console.error(`Error Code: ${error.status}\nMessage: ${error.message}`);
+        // Pass the error along the Observable chain to cause error to be triggered or return fake data
+        // return throwError(() => new Error('Error Caught!'));
+        return of([]);
+      })
+    );
+    return forkJoin([call1, callWithErrorButCaught]);
+  }
 
 }

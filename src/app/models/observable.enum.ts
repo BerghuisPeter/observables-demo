@@ -7,5 +7,7 @@ export enum OBSERVABLE_ENUM {
   merge = 'merge',
   mergeMap = 'mergeMap',
   switchMap = 'switchMap',
-  forkJoin = 'forkJoin'
+  forkJoin = 'forkJoin',
+  retry = 'retry',
+  catchError = 'catchError'
 }

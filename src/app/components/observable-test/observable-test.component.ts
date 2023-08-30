@@ -27,7 +27,10 @@ export class ObservableTestComponent {
    * execute the observable and log emitted value(s)
    */
   public executeCall(): void {
-    this.observableCall?.subscribe(v => this.logService.log('Emitted value: ', v));
+    this.observableCall?.subscribe(
+      v => this.logService.log('Emitted value: ', v),
+      error => console.log(error)
+    );
   }
 
   private setContent(enumKey: OBSERVABLE_ENUM): void {
@@ -119,6 +122,28 @@ export class ObservableTestComponent {
       this.httpClient.get<any>('https://domain.com/users/2').pipe(delay(3000))
     ];
     return forkJoin(listOfCallsToMake);`;
+        break;
+      case OBSERVABLE_ENUM.retry:
+        this.description = `Retry can be used to retry a failed network request.`;
+        this.subDescription = ``;
+        this.function = `\n    return this.httpClient.get<any>('https://domain.com/users/5000').pipe(
+      retry({ count: 2, delay: 1000 })
+    );`;
+        break;
+      case OBSERVABLE_ENUM.catchError:
+        this.description = `catch an error.`;
+        this.subDescription = ``;
+        this.function = `\n    const call1 = this.httpClient.get<any>('https://domain.com/users/2');
+    const callWithErrorButCaught = this.httpClient.get<Post[]>('https://domain.com/users/5000').pipe(
+      catchError(error => {
+        // You can log the error or perform other actions here
+        console.error('Error Code: error.status Message: error.message');
+        // Pass the error along the Observable chain to cause error to be triggered or return fake data
+        // return throwError(() => new Error('Error Caught!'));
+        return of([]);
+      })
+    );
+    return forkJoin([call1, callWithErrorButCaught]);`;
         break;
     }
   }

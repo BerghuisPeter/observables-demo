@@ -16,8 +16,9 @@
     }
 
     & pre.code {
-      background-color: #f5f5f5;
+      background-color: #eef5ee;
       border-radius: 5px;
+      overflow: auto;
     }
   }
 }
