@@ -13,5 +13,12 @@
     <!--    <div>-->
     <!--      <p *ngFor="let log of logService.getLogs() | async">{{log}}</p>-->
     <!--    </div>-->
+
+    <ul *ngIf="callSequence">
+      <li *ngFor="let myCall of callSequence">
+        <span>{{ myCall.message }}</span>
+        <mat-icon fontIcon="{{myCall.getStatusIcon()}}"></mat-icon>
+      </li>
+    </ul>
   </mat-sidenav-content>
 </mat-sidenav-container>

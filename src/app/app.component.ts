@@ -3,6 +3,7 @@ import {
   catchError,
   concat,
   concatMap,
+  defer,
   delay,
   forkJoin,
   from,
@@ -19,6 +20,7 @@ import { HttpClient } from "@angular/common/http";
 import { Post } from "./models/post.model";
 import { OBSERVABLE_ENUM } from "./models/observable.enum";
 import { LogService } from "./services/log.service";
+import { CallSequence } from "./models/call-sequence.model";
 
 @Component({
   selector: 'app-root',
@@ -31,16 +33,19 @@ export class AppComponent {
 
   public currentObservable$: Observable<any>;
   public currentEnum: OBSERVABLE_ENUM;
+  public callSequence: CallSequence[];
 
   numberOfPosts: number = 0;
 
   constructor(private httpClient: HttpClient, public logService: LogService) {
     this.enumList = Object.values(OBSERVABLE_ENUM);
+    this.callSequence = [];
     this.currentObservable$ = this.getNormal();
     this.currentEnum = OBSERVABLE_ENUM.normal;
   }
 
   changeContent(enumKey: any) {
+    this.callSequence = [];
     this.logService.clearLogs();
     this.currentEnum = enumKey;
     switch (enumKey) {
@@ -80,12 +85,33 @@ export class AppComponent {
     }
   }
 
+
+  private sequenceObserver(observable: Observable<any>): Observable<any> {
+    const myCallSequence: CallSequence = new CallSequence(`call${this.callSequence.length + 1}`);
+    this.callSequence.push(myCallSequence);
+
+    return defer(() => {
+      myCallSequence.status = 'loading';
+      return observable
+        .pipe(
+          delay(1000),
+          catchError(error => {
+            myCallSequence.status = 'error';
+            throw error;
+          }),
+          tap(() => myCallSequence.status = 'done')
+        )
+    });
+  };
+
   /**
    * Just a normal http call for a list of posts made by user with ID = 1.
    * @private
    */
   private getNormal(): Observable<Post[]> {
-    return this.httpClient.get<Post[]>('https://jsonplaceholder.typicode.com/users/1/posts');
+    return this.sequenceObserver(
+      this.httpClient.get<Post[]>('https://jsonplaceholder.typicode.com/users/1/posts')
+    );
   }
 
   /**
@@ -119,9 +145,9 @@ export class AppComponent {
    * @private
    */
   private getConcat(): Observable<any> {
-    const call1 = this.httpClient.get<any>('https://jsonplaceholder.typicode.com/users/2');
-    const call2 = this.httpClient.get<Post[]>('https://jsonplaceholder.typicode.com/users/2/posts');
-    const call3 = this.httpClient.get<any>('https://jsonplaceholder.typicode.com/users/2/albums');
+    const call1 = this.sequenceObserver(this.httpClient.get<any>('https://jsonplaceholder.typicode.com/users/2'));
+    const call2 = this.sequenceObserver(this.httpClient.get<Post[]>('https://jsonplaceholder.typicode.com/users/2/posts'));
+    const call3 = this.sequenceObserver(this.httpClient.get<any>('https://jsonplaceholder.typicode.com/users/2/albums'));
 
     return concat(call1, call2, call3);
   }
@@ -137,10 +163,7 @@ export class AppComponent {
 
     return from(commentIdsToGet).pipe(
       concatMap((commentId: number) =>
-        this.httpClient.get<any>('https://jsonplaceholder.typicode.com/comments/' + commentId)
-          .pipe(
-            delay(700)
-          )
+        this.sequenceObserver(this.httpClient.get<any>('https://jsonplaceholder.typicode.com/comments/' + commentId))
       )
     );
   }
@@ -150,9 +173,9 @@ export class AppComponent {
    * @private
    */
   private getMerge(): Observable<any> {
-    const call1 = this.httpClient.get<any>('https://jsonplaceholder.typicode.com/users/2');
-    const call2 = this.httpClient.get<Post[]>('https://jsonplaceholder.typicode.com/users/2/posts');
-    const call3 = this.httpClient.get<any>('https://jsonplaceholder.typicode.com/users/2/albums');
+    const call1 = this.sequenceObserver(this.httpClient.get<any>('https://jsonplaceholder.typicode.com/users/2'));
+    const call2 = this.sequenceObserver(this.httpClient.get<Post[]>('https://jsonplaceholder.typicode.com/users/2/posts'));
+    const call3 = this.sequenceObserver(this.httpClient.get<any>('https://jsonplaceholder.typicode.com/users/2/albums'));
 
     return merge(call1, call2, call3);
   }
@@ -168,10 +191,7 @@ export class AppComponent {
 
     return from(commentIdsToGet).pipe(
       mergeMap((commentId: number) =>
-        this.httpClient.get<any>('https://jsonplaceholder.typicode.com/comments/' + commentId)
-          .pipe(
-            delay(700)
-          )
+        this.sequenceObserver(this.httpClient.get<any>('https://jsonplaceholder.typicode.com/comments/' + commentId))
       )
     );
   }
@@ -182,9 +202,9 @@ export class AppComponent {
    * @private
    */
   private getSwitchMap(): Observable<any> {
-    return this.httpClient.get<Post>('https://jsonplaceholder.typicode.com/posts/3').pipe(
+    return this.sequenceObserver(this.httpClient.get<Post>('https://jsonplaceholder.typicode.com/posts/3')).pipe(
       switchMap((post: Post) =>
-        this.httpClient.get('https://jsonplaceholder.typicode.com/users/' + post.userId)
+        this.sequenceObserver(this.httpClient.get('https://jsonplaceholder.typicode.com/users/' + post.userId))
       )
     );
   }
@@ -195,8 +215,8 @@ export class AppComponent {
    */
   private getForkJoin(): Observable<any> {
     const listOfCallsToMake = [
-      this.httpClient.get<Post[]>('https://jsonplaceholder.typicode.com/users/2/posts'),
-      this.httpClient.get<any>('https://jsonplaceholder.typicode.com/users/2').pipe(delay(2000))
+      this.sequenceObserver(this.httpClient.get<Post[]>('https://jsonplaceholder.typicode.com/users/2/posts')),
+      this.sequenceObserver(this.httpClient.get<any>('https://jsonplaceholder.typicode.com/users/2')).pipe(delay(2000))
     ];
     return forkJoin(listOfCallsToMake);
   }
@@ -206,7 +226,7 @@ export class AppComponent {
    * @private
    */
   private getRetry(): Observable<any> {
-    return this.httpClient.get<any>('https://jsonplaceholder.typicode.com/users/5000').pipe(
+    return this.sequenceObserver(this.httpClient.get<any>('https://jsonplaceholder.typicode.com/users/5000')).pipe(
       retry({ count: 2, delay: 2000 })
     );
   }

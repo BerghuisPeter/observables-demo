@@ -14,3 +14,32 @@ mat-sidenav {
 mat-sidenav-content {
   height: 100vh;
 }
+
+ul {
+  display: inline-flex;
+  flex-direction: column;
+}
+
+li {
+  display: inline-flex;
+  gap: 0.5rem;
+  align-items: center;
+
+  & mat-icon {
+    &[fontIcon=trending_flat] {
+      color: black;
+    }
+
+    &[fontIcon=sync] {
+      color: deepskyblue;
+    }
+
+    &[fontIcon=done] {
+      color: #0aa928;
+    }
+
+    &[fontIcon=close] {
+      color: red;
+    }
+  }
+}

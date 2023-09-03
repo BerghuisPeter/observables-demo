@@ -99,9 +99,6 @@ export class ObservableTestComponent {
     return from(commentIdsToGet).pipe(
       mergeMap((commentId: number) =>
         this.httpClient.get<any>('https://domain.com/comments/' + commentId)
-          .pipe(
-            delay(700)
-          )
       )
     );`;
         break;
