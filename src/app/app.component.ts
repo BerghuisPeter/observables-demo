@@ -85,7 +85,6 @@ export class AppComponent {
     }
   }
 
-
   private sequenceObserver(observable: Observable<any>): Observable<any> {
     const myCallSequence: CallSequence = new CallSequence(`call${this.callSequence.length + 1}`);
     this.callSequence.push(myCallSequence);
